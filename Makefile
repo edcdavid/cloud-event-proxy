@@ -139,6 +139,9 @@ docker-push-consumer: ## Push docker image with the manager.
 podman-build: #test ## Build docker image with the manager.
 	podman build --no-cache -t ${IMG} .
 
+podman-build-dlv: #test ## Build docker image with the manager.
+	podman build -f Dockerfile.dlv --no-cache -t ${IMG} .
+
 podman-push: ## Push docker image with the manager.
 	podman push ${IMG}
 
