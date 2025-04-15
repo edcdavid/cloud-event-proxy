@@ -621,6 +621,7 @@ func processMessages(c net.Conn) {
 			break
 		}
 		msg := scanner.Text()
+		log.Infof(msg)
 		eventManager.ExtractMetrics(msg)
 	}
 }
