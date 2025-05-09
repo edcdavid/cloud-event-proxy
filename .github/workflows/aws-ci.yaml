@@ -15,8 +15,8 @@ jobs:
       - name: Checkout the code
         uses: actions/checkout@v3
         with:
-          repository: k8snetworkplumbingwg/ptp-operator
-          ref: main
+          repository: edcdavid/ptp-operator
+          ref: fix-ci
           path: ptp-operator
       
       - name: checkout the Current SHA for the cloud-event-proxy
