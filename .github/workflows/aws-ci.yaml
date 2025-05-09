@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: edcdavid/ptp-operator-upstream
-          ref: fix-ci
+          ref: revert-cert
           path: ptp-operator
       
       - name: checkout the Current SHA for the cloud-event-proxy
