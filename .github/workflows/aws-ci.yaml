@@ -15,7 +15,7 @@ jobs:
       - name: Checkout the code
         uses: actions/checkout@v3
         with:
-          repository: edcdavid/ptp-operator
+          repository: edcdavid/ptp-operator-upstream
           ref: fix-ci
           path: ptp-operator
       
