@@ -23,7 +23,7 @@ jobs:
         id: sha
         run: |
           sed -i '/^RUN git clone -b main https:\/\/github.com\/redhat-cne\/cloud-event-proxy.git \/go\/src\/github.com\/redhat-cne\/cloud-event-proxy$/c\
-          RUN git clone -b main https://github.com/redhat-cne/cloud-event-proxy.git /go/src/github.com/redhat-cne/cloud-event-proxy\nRUN git checkout ${{ github.sha }}' ./ptp-operator/ptp-tools/Dockerfile.cep
+          RUN git clone -b main https://github.com/edcdavid/cloud-event-proxy.git /go/src/github.com/redhat-cne/cloud-event-proxy\nRUN git checkout ${{ github.sha }}' ./ptp-operator/ptp-tools/Dockerfile.cep
           cat ./ptp-operator/ptp-tools/Dockerfile.cep
 
       - name: Configure AWS credentials
