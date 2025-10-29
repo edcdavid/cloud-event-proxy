@@ -9,42 +9,74 @@ import (
 )
 
 type testCase struct {
-	ifname        string
-	expectedAlias string
+	ifname                 string
+	expectedClockIdentifier string
 }
 
-func Test_GetAlias(t *testing.T) {
+func Test_GetClockIdentifier(t *testing.T) {
 	testCases := []testCase{
-		{"eth0", "ethx"},
-		{"eth1.100", "ethx.100"},
-		{"eth1.100.XYZ", "ethx.100.XYZ"},
-		// Mellanox style naming
-		{"enP2s2f0np0", "enP2s2fx"},
-		{"enP1s1f1np1", "enP1s1fx"},
-		{"enP10s5f3np2", "enP10s5fx"},
-		{"ens1f3np3", "ens1fx"},
-		// Mellanox style naming with VLAN
-		{"enP2s2f0np0.100", "enP2s2fx.100"},
-		{"enP1s1f1np1.200", "enP1s1fx.200"},
-		{"enP10s5f3np2.300.XYZ", "enP10s5fx.300.XYZ"},
-		// Already aliased interfaces (should return as-is)
-		{"ens7fx", "ens7fx"},
-		{"ethx", "ethx"},
-		{"enP2s2fx", "enP2s2fx"},
-		{"ens1fx.100", "ens1fx.100"},
-		{"ens20f20.100", "ens20fx.100"},
-		{"enP10s5fx.300.XYZ", "enP10s5fx.300.XYZ"},
-		// Special master interface
+		// Special clock identifiers (should return as-is)
+		{"CLOCK_REALTIME", "CLOCK_REALTIME"},
 		{"master", "master"},
-		// Fallback cases (interfaces that don't match Intel or Mellanox format)
+		{"/dev/ptp0", "/dev/ptp0"},
+		{"/dev/ptp1", "/dev/ptp1"},
+		// Fallback cases (interfaces that don't match or have no PHC - will return original)
 		{"wlan", "wlan"},
 		{"lo", "lo"},
 		{"virbr", "virbr"},
 		{"docker", "docker"},
 	}
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("%s->%s", tc.ifname, tc.expectedAlias), func(t *testing.T) {
-			assert.Equal(t, tc.expectedAlias, utils.GetAlias(tc.ifname))
+		t.Run(fmt.Sprintf("%s->%s", tc.ifname, tc.expectedClockIdentifier), func(t *testing.T) {
+			assert.Equal(t, tc.expectedClockIdentifier, GetClockIdentifier(tc.ifname))
+		})
+	}
+}
+
+// Test_GetClockIdentifier_RealInterfaces tests with real network interfaces
+// These tests may return /dev/ptpX if the interface has PHC support,
+// or the original name if PHC lookup fails
+func Test_GetClockIdentifier_RealInterfaces(t *testing.T) {
+	testInterfaces := []string{
+		"eth0",
+		"eth1",
+		"enP2s2f0np0",
+		"enP1s1f1np1",
+		"ens1f3np3",
+	}
+	
+	for _, iface := range testInterfaces {
+		t.Run(iface, func(t *testing.T) {
+			result := utils.GetClockIdentifier(iface)
+			// Result should either be /dev/ptpX or the original interface name
+			if result != iface {
+				assert.Regexp(t, `^/dev/ptp\d+$`, result, "If changed, should be /dev/ptpX format")
+			}
+		})
+	}
+}
+
+// Test_GetClockIdentifier_VLAN tests VLAN interface handling
+// PTP runs on the base interface, so VLAN tags should be stripped
+func Test_GetClockIdentifier_VLAN(t *testing.T) {
+	testCases := []struct {
+		ifname string
+	}{
+		{ifname: "eth1.100"},
+		{ifname: "ens1f0.100"},
+		{ifname: "enP2s2f0np0.100"},
+		{ifname: "enP1s1f1np1.200"},
+	}
+	
+	for _, tc := range testCases {
+		t.Run(tc.ifname, func(t *testing.T) {
+			result := utils.GetClockIdentifier(tc.ifname)
+			// If PHC lookup succeeded, result should be /dev/ptpX (WITHOUT VLAN tag)
+			// If it failed, result should be original name
+			if result != tc.ifname {
+				assert.Regexp(t, `^/dev/ptp\d+$`, result, "Should be /dev/ptpX format without VLAN tag")
+				assert.NotContains(t, result, ".", "VLAN tag should NOT be in PHC ID")
+			}
 		})
 	}
 }

@@ -125,11 +125,11 @@ func (p *PTPEventState) UpdateCurrentEventState(c ClockState, metrics map[string
 		}
 		if clockState.IFace != nil {
 			iface := *clockState.IFace
-			alias := utils.GetAlias(iface)
+			clockIdentifier := utils.GetClockIdentifier(iface)
 			for k, v := range c.Value {
 				if clockState.Metric[k].metricGauge != nil {
 					clockState.Metric[k].metricGauge.With(map[string]string{"from": clockState.Process, "process": clockState.Process,
-						"node": clockState.NodeName, "iface": alias}).Set(float64(v))
+						"node": clockState.NodeName, "iface": clockIdentifier}).Set(float64(v))
 				} else {
 					log.Infof("metric object was not found for %s=%s", iface, k)
 				}
@@ -190,9 +190,9 @@ func (p *PTPEventState) UpdateCurrentEventState(c ClockState, metrics map[string
 			if clockState.IFace != nil {
 				iface = *clockState.IFace
 			}
-			alias := utils.GetAlias(iface)
+			clockIdentifier := utils.GetClockIdentifier(iface)
 			metrics[k].metricGauge.With(map[string]string{"from": clockState.Process, "process": clockState.Process,
-				"node": clockState.NodeName, "iface": alias}).Set(float64(v))
+				"node": clockState.NodeName, "iface": clockIdentifier}).Set(float64(v))
 		}
 		clockState.Metric = metrics
 		p.DependsOn[clockState.Process] = []*ClockState{clockState}
@@ -269,21 +269,21 @@ func (p *PTPEventState) DeleteAllMetrics(m []*prometheus.GaugeVec) {
 			if dd.IFace == nil {
 				continue
 			}
-			alias := utils.GetAlias(*dd.IFace)
+			clockIdentifier := utils.GetClockIdentifier(*dd.IFace)
 			if dd.Metric != nil {
 				// unregister metric
 				for _, v := range dd.Metric {
 					if v.metricGauge != nil && dd.IFace != nil {
-						v.metricGauge.Delete(prometheus.Labels{"process": dd.Process, "iface": alias, "node": dd.NodeName})
+						v.metricGauge.Delete(prometheus.Labels{"process": dd.Process, "iface": clockIdentifier, "node": dd.NodeName})
 						prometheus.Unregister(v.metricGauge)
 					}
 				}
 				for _, mm := range m {
 					mm.Delete(prometheus.Labels{
-						"process": dd.Process, "from": dd.Process, "node": dd.NodeName, "iface": alias})
+						"process": dd.Process, "from": dd.Process, "node": dd.NodeName, "iface": clockIdentifier})
 					// find metrics without from - click clock state
 					mm.Delete(prometheus.Labels{
-						"process": dd.Process, "node": dd.NodeName, "iface": alias})
+						"process": dd.Process, "node": dd.NodeName, "iface": clockIdentifier})
 				}
 			}
 			delete(p.DependsOn, dd.Process)

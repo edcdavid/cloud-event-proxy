@@ -36,14 +36,14 @@ func (p *PTPEventManager) ParsePTP4l(processName, configName, profileName, outpu
 		if err != nil {
 			log.Error("error parsing clock class change")
 		} else if ptpStats[master].ClockClass() != int64(clockClass) { // only if there is a change
-			var alias string
+			var clockIdentifier string
 			if m, ok := ptpStats[master]; ok {
-				alias = m.Alias()
+				clockIdentifier = m.ClockIdentifier()
 			}
-			if alias == "" {
-				alias, _ = ptp4lCfg.GetUnknownAlias()
+			if clockIdentifier == "" {
+				clockIdentifier, _ = ptp4lCfg.GetUnknownClockIdentifier()
 			}
-			masterResource := fmt.Sprintf("%s/%s", alias, MasterClockType)
+			masterResource := fmt.Sprintf("%s/%s", clockIdentifier, MasterClockType)
 
 			ptpStats[master].SetClockClass(int64(clockClass))
 			ClockClassMetrics.With(prometheus.Labels{
@@ -120,18 +120,18 @@ func (p *PTPEventManager) ParsePTP4l(processName, configName, profileName, outpu
 			ptpStats[master].SetRole(types.FAULTY) // update slave port as faulty
 			log.Infof("master process name %s and masteroffsetsource %s", ptpStats[master].ProcessName(), masterOffsetSource)
 			if ptpStats[master].ProcessName() == masterOffsetSource {
-				alias := ptpStats[master].Alias()
-				masterResource := fmt.Sprintf("%s/%s", alias, MasterClockType)
+				clockIdentifier := ptpStats[master].ClockIdentifier()
+				masterResource := fmt.Sprintf("%s/%s", clockIdentifier, MasterClockType)
 				ptpStats[master].SetLastSyncState(syncState)
 				p.PublishEvent(syncState, ptpStats[master].LastOffset(), masterResource, ptp.PtpStateChange)
-				UpdateSyncStateMetrics(ptpStats[master].ProcessName(), alias, syncState)
+				UpdateSyncStateMetrics(ptpStats[master].ProcessName(), clockIdentifier, syncState)
 				if ptpOpts, ok := p.PtpConfigMapUpdates.PtpProcessOpts[profileName]; ok && ptpOpts != nil {
 					p.maybePublishOSClockSyncStateChangeEvent(ptpOpts, configName, profileName)
 					threshold := p.PtpThreshold(profileName, true)
 					if p.mock {
-						log.Infof("mock holdover is set to %s", ptpStats[MasterClockType].Alias())
+						log.Infof("mock holdover is set to %s", ptpStats[MasterClockType].ClockIdentifier())
 					} else {
-						go handleHoldOverState(p, ptpOpts, configName, profileName, threshold.HoldOverTimeout, ptpStats[MasterClockType].Alias(), threshold.Close)
+						go handleHoldOverState(p, ptpOpts, configName, profileName, threshold.HoldOverTimeout, ptpStats[MasterClockType].ClockIdentifier(), threshold.Close)
 					}
 				}
 			}
@@ -160,10 +160,10 @@ func handleHoldOverState(ptpManager *PTPEventManager,
 			if mStats.LastSyncState() == ptp.HOLDOVER { // if it was still in holdover while timing out then switch to FREERUN
 				log.Infof("HOLDOVER timeout after %d secs,setting clock state to FREERUN from HOLDOVER state for %s",
 					holdoverTimeout, master)
-				masterResource := fmt.Sprintf("%s/%s", mStats.Alias(), MasterClockType)
+				masterResource := fmt.Sprintf("%s/%s", mStats.ClockIdentifier(), MasterClockType)
 				ptpStats[MasterClockType].SetLastSyncState(ptp.FREERUN)
 				ptpManager.PublishEvent(ptp.FREERUN, ptpStats[MasterClockType].LastOffset(), masterResource, ptp.PtpStateChange)
-				UpdateSyncStateMetrics(mStats.ProcessName(), mStats.Alias(), ptp.FREERUN)
+				UpdateSyncStateMetrics(mStats.ProcessName(), mStats.ClockIdentifier(), ptp.FREERUN)
 				// don't check of os clock sync state if phc2 not enabled
 				ptpManager.maybePublishOSClockSyncStateChangeEvent(ptpOpts, configName, ptpProfileName)
 			}

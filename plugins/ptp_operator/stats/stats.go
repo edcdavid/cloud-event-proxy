@@ -33,7 +33,7 @@ type Stats struct {
 	delay                  int64
 	lastOffset             int64
 	lastSyncState          ptp.SyncState
-	aliasName              string
+	clockIdentifier        string
 	clockClass             int64
 	role                   types.PtpPortRole
 	ptpDependentEventState *event.PTPEventState
@@ -122,14 +122,14 @@ func (s *Stats) ClockClass() int64 {
 	return s.clockClass
 }
 
-// Alias return alias name
-func (s *Stats) Alias() string {
-	return s.aliasName
+// ClockIdentifier returns the clock identifier
+func (s *Stats) ClockIdentifier() string {
+	return s.clockIdentifier
 }
 
-// SetAlias ... set alias name for slave port
-func (s *Stats) SetAlias(val string) {
-	s.aliasName = val
+// SetClockIdentifier sets the clock identifier for the port
+func (s *Stats) SetClockIdentifier(val string) {
+	s.clockIdentifier = val
 }
 
 // SyncState return last known SyncState state
@@ -150,7 +150,7 @@ func (s *Stats) reset() { //nolint:unused
 	s.min = 0
 	s.sumDiffSqr = 0
 	s.sumSqr = 0
-	s.aliasName = ""
+	s.clockIdentifier = ""
 	s.role = types.UNKNOWN
 	s.frequencyAdjustment = 0
 	s.delay = 0
@@ -355,7 +355,7 @@ func (s *Stats) String() string {
 	b := strings.Builder{}
 	b.WriteString("  configName: " + s.configName + "\n")
 	b.WriteString("  processName: " + s.processName + "\n")
-	b.WriteString("  aliasName: " + s.aliasName + "\n")
+	b.WriteString("  clockIdentifier: " + s.clockIdentifier + "\n")
 	b.WriteString("  offsetSource: " + s.offsetSource + "\n")
 	b.WriteString("--------------------------------\n")
 	if s.PtpDependentEventState() != nil && s.ptpDependentEventState.DependsOn != nil {

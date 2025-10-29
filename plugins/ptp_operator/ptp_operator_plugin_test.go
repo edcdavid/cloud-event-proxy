@@ -160,7 +160,7 @@ func TestGetCurrentStatOverrideFn(t *testing.T) {
 			eventType:               ptpEvent.PtpStateChange,
 			expectedResourceAddress: fmt.Sprintf("/cluster/node/%s/%s/%s", nodeName, "ens1fx", MasterClockType),
 			statsData: []statsData{
-				{clockType: MasterClockType, configName: "ptp4l.0.config", processName: "ptp4l", alias: "ens1fx", iface: "ens1f0", syncState: ptpEvent.LOCKED},
+				{clockType: MasterClockType, configName: "ptp4l.0.config", processName: "ptp4l", clockIdentifier: "/dev/ptp1", iface: "ens1f0", syncState: ptpEvent.LOCKED},
 			},
 		},
 		{
@@ -170,7 +170,7 @@ func TestGetCurrentStatOverrideFn(t *testing.T) {
 			eventType:               ptpEvent.OsClockSyncStateChange,
 			expectedResourceAddress: fmt.Sprintf("/cluster/node/%s/%s", nodeName, "event-not-found"),
 			statsData: []statsData{
-				{clockType: MasterClockType, configName: "ptp4l.0.config", processName: "phc2sys", alias: "ens1fx", iface: "ens1f0", syncState: ptpEvent.LOCKED},
+				{clockType: MasterClockType, configName: "ptp4l.0.config", processName: "phc2sys", clockIdentifier: "/dev/ptp1", iface: "ens1f0", syncState: ptpEvent.LOCKED},
 			},
 		},
 		{
@@ -180,7 +180,7 @@ func TestGetCurrentStatOverrideFn(t *testing.T) {
 			eventType:               ptpEvent.OsClockSyncStateChange,
 			expectedResourceAddress: fmt.Sprintf("/cluster/node/%s/%s", nodeName, ClockRealTime),
 			statsData: []statsData{
-				{clockType: ClockRealTime, configName: "ptp4l.0.config", processName: "phc2sys", alias: "", iface: "", syncState: ptpEvent.LOCKED},
+				{clockType: ClockRealTime, configName: "ptp4l.0.config", processName: "phc2sys", clockIdentifier: "", iface: "", syncState: ptpEvent.LOCKED},
 			},
 		},
 		{
@@ -190,7 +190,7 @@ func TestGetCurrentStatOverrideFn(t *testing.T) {
 			expectedSyncState:       ptpTypes.FREERUN,
 			expectedResourceAddress: fmt.Sprintf("/cluster/node/%s%s", nodeName, ptpEvent.SyncStatusState),
 			statsData: []statsData{
-				{clockType: MasterClockType, configName: "ptp4l.0.config", processName: "ptp4l", alias: "ens1fx", iface: "ens1f0", syncState: ptpEvent.LOCKED},
+				{clockType: MasterClockType, configName: "ptp4l.0.config", processName: "ptp4l", clockIdentifier: "/dev/ptp1", iface: "ens1f0", syncState: ptpEvent.LOCKED},
 				{clockType: ClockRealTime, configName: "ptp4l.0.config", processName: "phc2sys", syncState: ptpEvent.FREERUN},
 			},
 		},
@@ -201,7 +201,7 @@ func TestGetCurrentStatOverrideFn(t *testing.T) {
 			expectedSyncState:       ptpTypes.FREERUN,
 			expectedResourceAddress: fmt.Sprintf("/cluster/node/%s%s", nodeName, ptpEvent.SyncStatusState),
 			statsData: []statsData{
-				{clockType: MasterClockType, configName: "ptp4l.0.config", processName: "ptp4l", alias: "ens1fx", iface: "ens1f0", syncState: ptpEvent.FREERUN},
+				{clockType: MasterClockType, configName: "ptp4l.0.config", processName: "ptp4l", clockIdentifier: "/dev/ptp1", iface: "ens1f0", syncState: ptpEvent.FREERUN},
 				{clockType: ClockRealTime, configName: "ptp4l.0.config", processName: "phc2sys", syncState: ptpEvent.FREERUN},
 			},
 		},
@@ -212,7 +212,7 @@ func TestGetCurrentStatOverrideFn(t *testing.T) {
 			expectedSyncState:       ptpTypes.LOCKED,
 			expectedResourceAddress: fmt.Sprintf("/cluster/node/%s%s", nodeName, ptpEvent.SyncStatusState),
 			statsData: []statsData{
-				{clockType: MasterClockType, configName: "ptp4l.0.config", processName: "ptp4l", alias: "ens1fx", iface: "ens1f0", syncState: ptpEvent.LOCKED},
+				{clockType: MasterClockType, configName: "ptp4l.0.config", processName: "ptp4l", clockIdentifier: "/dev/ptp1", iface: "ens1f0", syncState: ptpEvent.LOCKED},
 				{clockType: ClockRealTime, configName: "ptp4l.0.config", processName: "phc2sys", syncState: ptpEvent.LOCKED},
 			},
 		},
@@ -223,7 +223,7 @@ func TestGetCurrentStatOverrideFn(t *testing.T) {
 			expectedSyncState:       ptpTypes.LOCKED,
 			expectedResourceAddress: fmt.Sprintf("/cluster/node/%s%s", nodeName, ptpEvent.SyncStatusState),
 			statsData: []statsData{
-				{clockType: MasterClockType, configName: "ptp4l.0.config", processName: "ptp4l", alias: "ens1fx", iface: "ens1f0", syncState: ptpEvent.LOCKED},
+				{clockType: MasterClockType, configName: "ptp4l.0.config", processName: "ptp4l", clockIdentifier: "/dev/ptp1", iface: "ens1f0", syncState: ptpEvent.LOCKED},
 				{clockType: ClockRealTime, configName: "ptp4l.0.config", processName: "phc2sys", syncState: ptpEvent.LOCKED},
 			},
 			depsClockState: []event2.ClockState{
@@ -239,7 +239,7 @@ func TestGetCurrentStatOverrideFn(t *testing.T) {
 			expectedSyncState:       ptpTypes.FREERUN,
 			expectedResourceAddress: fmt.Sprintf("/cluster/node/%s%s", nodeName, ptpEvent.SyncStatusState),
 			statsData: []statsData{
-				{clockType: MasterClockType, configName: "ptp4l.0.config", processName: "ptp4l", alias: "ens1fx", iface: "ens1f0", syncState: ptpEvent.LOCKED},
+				{clockType: MasterClockType, configName: "ptp4l.0.config", processName: "ptp4l", clockIdentifier: "/dev/ptp1", iface: "ens1f0", syncState: ptpEvent.LOCKED},
 				{clockType: ClockRealTime, configName: "ptp4l.0.config", processName: "phc2sys", syncState: ptpEvent.FREERUN},
 			},
 			depsClockState: []event2.ClockState{
@@ -255,7 +255,7 @@ func TestGetCurrentStatOverrideFn(t *testing.T) {
 			expectedSyncState:       ptpTypes.LOCKED,
 			expectedResourceAddress: fmt.Sprintf("/cluster/node/%s%s", nodeName, ptpEvent.SyncStatusState),
 			statsData: []statsData{
-				{clockType: MasterClockType, configName: "ptp4l.0.config", processName: "ptp4l", alias: "ens1fx", iface: "ens1f0", syncState: ptpEvent.LOCKED},
+				{clockType: MasterClockType, configName: "ptp4l.0.config", processName: "ptp4l", clockIdentifier: "/dev/ptp1", iface: "ens1f0", syncState: ptpEvent.LOCKED},
 				{clockType: ClockRealTime, configName: "ptp4l.0.config", processName: "phc2sys", syncState: ptpEvent.LOCKED},
 			},
 			depsClockState: []event2.ClockState{
@@ -303,7 +303,7 @@ func TestGetCurrentStatOverrideFnConcurrentMapAccess(t *testing.T) {
 
 	event := buildEvent(nodeName, ptpEvent.PtpLockState, ptpEvent.PtpStateChange)
 	sData := []statsData{
-		{clockType: MasterClockType, configName: "ptp4l.0.config", processName: "ptp4l", alias: "ens1fx", iface: "ens1f0", syncState: ptpEvent.LOCKED},
+		{clockType: MasterClockType, configName: "ptp4l.0.config", processName: "ptp4l", clockIdentifier: "/dev/ptp1", iface: "ens1f0", syncState: ptpEvent.LOCKED},
 		{clockType: ClockRealTime, configName: "ptp4l.0.config", processName: "phc2sys", syncState: ptpEvent.FREERUN},
 	}
 
@@ -334,12 +334,12 @@ func TestGetCurrentStatOverrideFnConcurrentMapAccess(t *testing.T) {
 // Define the struct to match the JSON structure
 
 type statsData struct {
-	clockType   string
-	configName  string
-	alias       string
-	iface       string
-	processName string
-	syncState   ptpEvent.SyncState
+	clockType       string
+	configName      string
+	clockIdentifier string
+	iface           string
+	processName     string
+	syncState       ptpEvent.SyncState
 }
 
 func getStats(statsData []statsData, depsClockState []event2.ClockState) map[ptpTypes.ConfigName]stats.PTPStats {
@@ -353,7 +353,7 @@ func getStats(statsData []statsData, depsClockState []event2.ClockState) map[ptp
 		if _, found := s[ptpTypes.ConfigName(statsObj.configName)][ptpTypes.IFace(statsObj.clockType)]; !found {
 			s[ptpTypes.ConfigName(statsObj.configName)][ptpTypes.IFace(statsObj.clockType)] = stats.NewStats(string(statsObj.clockType))
 			s[ptpTypes.ConfigName(statsObj.configName)][ptpTypes.IFace(statsObj.clockType)].SetOffsetSource(statsObj.processName)
-			s[ptpTypes.ConfigName(statsObj.configName)][ptpTypes.IFace(statsObj.clockType)].SetAlias(statsObj.alias)
+			s[ptpTypes.ConfigName(statsObj.configName)][ptpTypes.IFace(statsObj.clockType)].SetClockIdentifier(statsObj.clockIdentifier)
 			s[ptpTypes.ConfigName(statsObj.configName)][ptpTypes.IFace(statsObj.clockType)].SetProcessName(statsObj.processName)
 			s[ptpTypes.ConfigName(statsObj.configName)][ptpTypes.IFace(statsObj.clockType)].SetLastSyncState(statsObj.syncState)
 

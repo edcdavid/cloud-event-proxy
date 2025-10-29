@@ -1,50 +1,56 @@
 package utils
 
 import (
-	"regexp"
+	"strings"
+
+	"github.com/redhat-cne/cloud-event-proxy/plugins/ptp_operator/network"
 )
 
-// GetAlias generates a PHC (PTP Hardware Clock) identifier alias from network interface names.
-// It supports Intel and Mellanox naming formats with optional VLAN tags.
+// GetClockIdentifier generates a PTP clock identifier from network interface names.
+// For PHC-capable network interfaces, it returns the native /dev/ptpX identifier.
+// For other clock types (CLOCK_REALTIME, master, etc.), it returns the name unchanged.
 //
-// Supported formats:
-//   - Intel: eth0 -> ethx, ens1f0 -> ens1fx, ens1f0.100 -> ens1fx.100
-//   - Mellanox: enP2s2f0np0 -> enP2s2fx, enP2s2f0np0.100 -> enP2s2fx.100
-//
-// For unsupported formats, returns the original interface name and logs an error.
+// This function first checks the PHC ID cache (populated from NodePtpDevice CR) as the
+// primary source of truth. If not found in cache, it falls back to querying via ethtool.
 //
 // Parameters:
-//   - ifname: Network interface name (e.g., "ens1f0", "enP2s2f0np0", "eth0.100")
+//   - ifname: Network interface name (e.g., "ens1f0", "enP2s2f0np0") or clock identifier
 //
 // Returns:
-//   - Alias string for PHC identification, or original name if format is unsupported
-func GetAlias(ifname string) string {
-	alias := ""
-	if ifname != "" {
-		// Check if it's already an aliased interface (ends with 'x' before optional VLAN)
-		alreadyAliasedPattern := regexp.MustCompile(`^(.+?)x(\..+)?$`)
-		if alreadyAliasedPattern.MatchString(ifname) {
-			return ifname
-		}
-
-		// Single regex to handle both Intel and Mellanox formats with optional VLAN
-		// Intel format: ens1f0, eth0, ens1f0.100 -> ens1fx, ethx, ens1fx.100
-		// Mellanox format: enP2s2f0np0, enP2s2f0np0.100 -> enP2s2fx, enP2s2fx.100
-		pattern := regexp.MustCompile(`^(.+?)(\d+)(?:np\d+)?(\..+)?$`)
-		matches := pattern.FindStringSubmatch(ifname)
-
-		if len(matches) >= 3 {
-			// matches[1] contains the prefix (everything before the last digit sequence)
-			// matches[2] contains the digit sequence to replace
-			// matches[3] contains the VLAN part (including the dot) or empty string
-			alias = matches[1] + "x"
-			if len(matches) > 3 && matches[3] != "" {
-				alias += matches[3] // append VLAN part if present
-			}
-		} else {
-			// Interface doesn't match Intel or Mellanox format, return original interface name
-			alias = ifname
-		}
+//   - /dev/ptpX for PHC-capable network interfaces, or original name for other clock types
+func GetClockIdentifier(ifname string) string {
+	if ifname == "" {
+		return ""
 	}
-	return alias
+
+	// For special clock identifiers (not actual network interfaces), return as-is
+	if ifname == "CLOCK_REALTIME" || ifname == "master" || strings.HasPrefix(ifname, "/dev/ptp") {
+		return ifname
+	}
+
+	// For network interfaces, get the PHC device identifier
+	// Strip VLAN tag if present (e.g., ens1f0.100 -> ens1f0)
+	// PTP runs on the base interface, not per VLAN
+	baseIface := ifname
+	if idx := strings.Index(ifname, "."); idx != -1 {
+		baseIface = ifname[:idx]
+	}
+
+	// First, try to get PHC ID from cache (populated from NodePtpDevice CR)
+	// This is the preferred source of truth
+	phcId := GetPhcIdFromCache(baseIface)
+
+	// If not in cache, fall back to querying via ethtool
+	if phcId == "" {
+		phcId = network.GetPhcId(baseIface)
+	}
+
+	// If we have a PHC ID, return it (without VLAN tag)
+	// PTP hardware clock is shared across all VLANs on the same interface
+	if phcId != "" {
+		return phcId
+	}
+
+	// If PHC ID cannot be determined, return the original interface name
+	return ifname
 }

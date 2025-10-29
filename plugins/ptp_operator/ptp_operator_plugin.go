@@ -247,8 +247,8 @@ func getCurrentStatOverrideFn() func(e v2.Event, d *channel.DataChan) error {
 			for ptpInterface, s := range eventManager.GetStats(config) { // iface->stats
 				switch ptpInterface {
 				case ptpMetrics.MasterClockType:
-					if s.Alias() != "" {
-						ptpInterface = ptpTypes.IFace(fmt.Sprintf("%s/%s", s.Alias(), ptpMetrics.MasterClockType))
+					if s.ClockIdentifier() != "" {
+						ptpInterface = ptpTypes.IFace(fmt.Sprintf("%s/%s", s.ClockIdentifier(), ptpMetrics.MasterClockType))
 					}
 					switch eventType {
 					case ptp.PtpStateChange:
@@ -280,7 +280,7 @@ func getCurrentStatOverrideFn() func(e v2.Event, d *channel.DataChan) error {
 							gpsFixState, offset, syncState, _ := s.GetDependsOnValueState(gnssProcessName, nil, "gnss_status")
 							offsetInt := int64(offset)
 							state := eventManager.GetGPSFixState(gpsFixState, syncState)
-							ptpInterface = ptpTypes.IFace(fmt.Sprintf("%s/%s", s.Alias(), ptpMetrics.MasterClockType))
+							ptpInterface = ptpTypes.IFace(fmt.Sprintf("%s/%s", s.ClockIdentifier(), ptpMetrics.MasterClockType))
 							data = processDataFn(data, eventManager.GetPTPEventsData(state, offsetInt, string(ptpInterface), eventType))
 							// add gps fix data to data model
 							data.Values = append(data.Values, event.DataValue{
@@ -585,17 +585,17 @@ func processPtp4lConfigFileUpdates() {
 				}
 				if s, found := ptpStats[MasterClockType]; found {
 					if s.ProcessName() == ptp4lProcessName {
-						ptpMetrics.DeletedPTPMetrics(s.OffsetSource(), ptp4lProcessName, s.Alias())
+						ptpMetrics.DeletedPTPMetrics(s.OffsetSource(), ptp4lProcessName, s.ClockIdentifier())
 					} else {
-						ptpMetrics.DeletedPTPMetrics(s.OffsetSource(), ts2PhcProcessName, s.Alias())
+						ptpMetrics.DeletedPTPMetrics(s.OffsetSource(), ts2PhcProcessName, s.ClockIdentifier())
 						for _, p := range ptpStats {
 							if p.PtpDependentEventState() != nil {
 								if p.HasProcessEnabled(gnssProcessName) {
 									if ptpMetrics.NmeaStatus != nil {
 										ptpMetrics.NmeaStatus.Delete(prometheus.Labels{
-											"process": ts2PhcProcessName, "node": eventManager.NodeName(), "iface": p.Alias()})
+											"process": ts2PhcProcessName, "node": eventManager.NodeName(), "iface": p.ClockIdentifier()})
 									}
-									masterResource := fmt.Sprintf("%s/%s", p.Alias(), MasterClockType)
+									masterResource := fmt.Sprintf("%s/%s", p.ClockIdentifier(), MasterClockType)
 									eventManager.PublishEvent(ptp.FREERUN, ptpMetrics.FreeRunOffsetValue, masterResource, ptp.GnssStateChange)
 								}
 							}
@@ -603,11 +603,11 @@ func processPtp4lConfigFileUpdates() {
 								ptpMetrics.ClockClassMetrics.Delete(prometheus.Labels{
 									"process": ptp4lProcessName, "config": string(ptpConfigFileName), "node": eventManager.NodeName()})
 							}
-							ptpMetrics.DeletedPTPMetrics(MasterClockType, ts2PhcProcessName, p.Alias())
+							ptpMetrics.DeletedPTPMetrics(MasterClockType, ts2PhcProcessName, p.ClockIdentifier())
 							p.DeleteAllMetrics([]*prometheus.GaugeVec{ptpMetrics.PtpOffset, ptpMetrics.SyncState})
 						}
 					}
-					masterResource := fmt.Sprintf("%s/%s", s.Alias(), MasterClockType)
+					masterResource := fmt.Sprintf("%s/%s", s.ClockIdentifier(), MasterClockType)
 					eventManager.PublishEvent(ptp.FREERUN, ptpMetrics.FreeRunOffsetValue, masterResource, ptp.PtpStateChange)
 				}
 				eventManager.DeleteStatsConfig(ptpConfigFileName)

@@ -176,18 +176,18 @@ func (p *PTPEventManager) ExtractMetrics(msg string) {
 			case MasterClockType:
 				ptpInterface, _ = ptp4lCfg.ByRole(types.SLAVE)
 				if ptpInterface.Name != "" {
-					alias := utils.GetAlias(ptpInterface.Name)
-					ptpStats[master].SetAlias(alias)
-					UpdatePTPMetrics(master, processName, alias, ptpOffset, maxPtpOffset, frequencyAdjustment, delay)
+					clockIdentifier := utils.GetClockIdentifier(ptpInterface.Name)
+					ptpStats[master].SetClockIdentifier(clockIdentifier)
+					UpdatePTPMetrics(master, processName, clockIdentifier, ptpOffset, maxPtpOffset, frequencyAdjustment, delay)
 				} else {
 					// this should not happen
 					log.Errorf("metrics found for empty interface %s", output)
 				}
 			default:
 				if processName == ts2phcProcessName {
-					alias := utils.GetAlias(interfaceName)
-					ptpStats[master].SetAlias(alias)
-					UpdatePTPMetrics(master, processName, alias, ptpOffset, maxPtpOffset, frequencyAdjustment, delay)
+					clockIdentifier := utils.GetClockIdentifier(interfaceName)
+					ptpStats[master].SetClockIdentifier(clockIdentifier)
+					UpdatePTPMetrics(master, processName, clockIdentifier, ptpOffset, maxPtpOffset, frequencyAdjustment, delay)
 				}
 			}
 		} else if strings.Contains(output, "nmea_status") &&
@@ -196,9 +196,9 @@ func (p *PTPEventManager) ExtractMetrics(msg string) {
 			interfaceName, status, _, _ := extractNmeaMetrics(processName, output)
 			// ts2phc return actual interface name unlike ptp4l
 			ptpInterface = ptp4lconf.PTPInterface{Name: interfaceName}
-			alias := utils.GetAlias(interfaceName)
+			clockIdentifier := utils.GetClockIdentifier(interfaceName)
 			// no event for nmeas status , change in GM will manage ptp events and sync states
-			UpdateNmeaStatusMetrics(processName, alias, status)
+			UpdateNmeaStatusMetrics(processName, clockIdentifier, status)
 		} else if strings.Contains(output, "process_status") &&
 			processName == ts2phcProcessName {
 			// do nothing processDown identifier will update  metrics and stats
@@ -274,11 +274,11 @@ func (p *PTPEventManager) ExtractMetrics(msg string) {
 				}
 
 				if _, ok := ptpStats[master]; ok { // ha wont have both master and clockreal_time
-					ptpStats[ClockRealTime].SetAlias(ptpStats[master].Alias())
+					ptpStats[ClockRealTime].SetClockIdentifier(ptpStats[master].ClockIdentifier())
 					p.GenPTPEvent(profileName, ptpStats[ClockRealTime], interfaceName, int64(ptpOffset), syncState, ptp.OsClockSyncStateChange)
 				} else { // for HA to send event without monitoring leaders
-					//TODO : manage leaders to trigger events in case of HA pick profile name as alias
-					ptpStats[ClockRealTime].SetAlias("ptp-ha-enabled")
+					//TODO : manage leaders to trigger events in case of HA pick profile name as clock identifier
+					ptpStats[ClockRealTime].SetClockIdentifier("ptp-ha-enabled")
 					p.GenPTPEvent(profileName, ptpStats[ClockRealTime], interfaceName, int64(ptpOffset), syncState, ptp.OsClockSyncStateChange)
 				}
 				// continue to update metrics regardless and stick to last sync state
@@ -287,28 +287,28 @@ func (p *PTPEventManager) ExtractMetrics(msg string) {
 			case MasterClockType: // this ptp4l[5196819.100]: [ptp4l.0.config] master offset   -2162130 s2 freq +22451884 path delay
 				// Report events for master  by masking the index  number of the slave interface
 				if ptpInterface.Name != "" {
-					alias := ptpStats[types.IFace(interfaceName)].Alias()
-					if alias == "" {
-						alias = utils.GetAlias(ptpInterface.Name)
-						ptpStats[types.IFace(interfaceName)].SetAlias(alias)
+					clockIdentifier := ptpStats[types.IFace(interfaceName)].ClockIdentifier()
+					if clockIdentifier == "" {
+						clockIdentifier = utils.GetClockIdentifier(ptpInterface.Name)
+						ptpStats[types.IFace(interfaceName)].SetClockIdentifier(clockIdentifier)
 					}
 					// forT-BC only update metrics/ but we are missing maxAbs for T-BC, fro now it will use  T-BC offsets
-					UpdatePTPMetrics(offsetSource, processName, alias, ptpOffset, float64(ptpStats[types.IFace(interfaceName)].MaxAbs()),
+					UpdatePTPMetrics(offsetSource, processName, clockIdentifier, ptpOffset, float64(ptpStats[types.IFace(interfaceName)].MaxAbs()),
 						frequencyAdjustment, delay)
 					if ptp4lCfg.ProfileType == ptp4lconf.TBC {
 						return // TBC does not trigger event for  master offset
 					}
-					masterResource := fmt.Sprintf("%s/%s", alias, MasterClockType)
+					masterResource := fmt.Sprintf("%s/%s", clockIdentifier, MasterClockType)
 					p.GenPTPEvent(profileName, ptpStats[types.IFace(interfaceName)], masterResource, int64(ptpOffset), syncState, ptp.PtpStateChange)
-					UpdateSyncStateMetrics(processName, alias, ptpStats[types.IFace(interfaceName)].LastSyncState())
+					UpdateSyncStateMetrics(processName, clockIdentifier, ptpStats[types.IFace(interfaceName)].LastSyncState())
 					ptpStats[types.IFace(interfaceName)].AddValue(int64(ptpOffset))
 				}
 			default: // for ts2phc the master stats are not updated at all, so rely on interface
 				if processName == ts2phcProcessName {
-					alias := ptpStats[types.IFace(interfaceName)].Alias()
-					if alias == "" {
-						alias = utils.GetAlias(ptpInterface.Name)
-						ptpStats[types.IFace(interfaceName)].SetAlias(alias)
+					clockIdentifier := ptpStats[types.IFace(interfaceName)].ClockIdentifier()
+					if clockIdentifier == "" {
+						clockIdentifier = utils.GetClockIdentifier(ptpInterface.Name)
+						ptpStats[types.IFace(interfaceName)].SetClockIdentifier(clockIdentifier)
 					}
 					// update ts2phc sync state to GM state if available,since GM State identifies PTP state
 					// This identifies sync state of GM and adds ts2phc offset to verify if it has to stay in GM state or set new state
@@ -316,7 +316,7 @@ func (p *PTPEventManager) ExtractMetrics(msg string) {
 					// let the check happen again : GM state published by linuxptp-daemon already have checked ts2phc offset
 					// TO GM State we need to know GM interface ; here MASTER stats will hold data of GM
 					// and GM state will be held as dependant of master key
-					masterResource := fmt.Sprintf("%s/%s", alias, MasterClockType)
+					masterResource := fmt.Sprintf("%s/%s", clockIdentifier, MasterClockType)
 					// use gm state to identify syncState
 					// master will hold multiple ts2phc state as one state based on GM state
 					// HANDLE case where there is no GM status but only ts2phc
@@ -331,8 +331,8 @@ func (p *PTPEventManager) ExtractMetrics(msg string) {
 						ptpStats[types.IFace(interfaceName)].SetLastOffset(int64(ptpOffset))
 						ptpStats[types.IFace(interfaceName)].AddValue(int64(ptpOffset))
 					}
-					UpdateSyncStateMetrics(processName, alias, ptpStats[types.IFace(interfaceName)].LastSyncState())
-					UpdatePTPMetrics(offsetSource, processName, alias, ptpOffset, float64(ptpStats[types.IFace(interfaceName)].MaxAbs()),
+					UpdateSyncStateMetrics(processName, clockIdentifier, ptpStats[types.IFace(interfaceName)].LastSyncState())
+					UpdatePTPMetrics(offsetSource, processName, clockIdentifier, ptpOffset, float64(ptpStats[types.IFace(interfaceName)].MaxAbs()),
 						frequencyAdjustment, delay)
 				}
 			}
@@ -357,20 +357,20 @@ func (p *PTPEventManager) processDownEvent(profileName, processName string, ptpS
 			if iface != ClockRealTime && iface != master {
 				ptpStats[iface].SetLastOffset(FreeRunOffsetValue)
 				ptpStats[iface].SetLastSyncState(ptp.FREERUN)
-				alias := ptpStats[iface].Alias()
-				if alias == "" {
-					alias = utils.GetAlias(string(iface))
+				clockIdentifier := ptpStats[iface].ClockIdentifier()
+				if clockIdentifier == "" {
+					clockIdentifier = utils.GetClockIdentifier(string(iface))
 				}
 				// update all ts2phc reported metrics as FREERUN
-				UpdateSyncStateMetrics(processName, alias, ptpStats[iface].LastSyncState())
-				UpdatePTPMetrics(master, processName, alias, FreeRunOffsetValue, float64(ptpStats[iface].MaxAbs()),
+				UpdateSyncStateMetrics(processName, clockIdentifier, ptpStats[iface].LastSyncState())
+				UpdatePTPMetrics(master, processName, clockIdentifier, FreeRunOffsetValue, float64(ptpStats[iface].MaxAbs()),
 					float64(ptpStats[iface].FrequencyAdjustment()), float64(ptpStats[iface].Delay()))
 			}
 		}
 	} else { // other profiles
 		if masterOffsetSource == processName {
-			if ptpStats[master].Alias() != "" {
-				masterResource := fmt.Sprintf("%s/%s", ptpStats[master].Alias(), MasterClockType)
+			if ptpStats[master].ClockIdentifier() != "" {
+				masterResource := fmt.Sprintf("%s/%s", ptpStats[master].ClockIdentifier(), MasterClockType)
 				p.GenPTPEvent(profileName, ptpStats[master], masterResource, FreeRunOffsetValue, ptp.FREERUN, ptp.PtpStateChange)
 			}
 		}

@@ -385,17 +385,17 @@ func (p *PTPEventManager) ParseGMLogs(processName, configName, output string, fi
 		Metric:      nil,
 		NodeName:    ptpNodeName,
 	}
-	alias := ptpStats[masterType].Alias()
-	if alias == "" {
-		alias = utils.GetAlias(iface)
-		ptpStats[masterType].SetAlias(alias)
+	clockIdentifier := ptpStats[masterType].ClockIdentifier()
+	if clockIdentifier == "" {
+		clockIdentifier = utils.GetClockIdentifier(iface)
+		ptpStats[masterType].SetClockIdentifier(clockIdentifier)
 	}
-	SyncState.With(map[string]string{"process": processName, "node": ptpNodeName, "iface": alias}).Set(GetSyncStateID(syncState))
+	SyncState.With(map[string]string{"process": processName, "node": ptpNodeName, "iface": clockIdentifier}).Set(GetSyncStateID(syncState))
 	// status metrics
 	ptpStats[masterType].SetPtpDependentEventState(clockState, ptpStats.HasMetrics(processName), ptpStats.HasMetricHelp(processName))
 
 	// If GM is locked/Freerun/Holdover then ptp state change event
-	masterResource := fmt.Sprintf("%s/%s", alias, MasterClockType)
+	masterResource := fmt.Sprintf("%s/%s", clockIdentifier, MasterClockType)
 	lastClockState := ptpStats[masterType].LastSyncState()
 
 	// When GM is enabled, there is only one event happening at the GM level for now, so it is not being sent to the state decision routine.
@@ -413,8 +413,8 @@ func (p *PTPEventManager) ParseGMLogs(processName, configName, output string, fi
 		log.Infof("%s sync state %s, last ptp state is : %s", masterResource, clockState.State, lastClockState)
 		ptpStats[masterType].SetLastSyncState(clockState.State)
 		p.PublishEvent(clockState.State, lastOffset, masterResource, ptp.PtpStateChange)
-		UpdateSyncStateMetrics(processName, alias, ptpStats[masterType].LastSyncState())
-		UpdatePTPOffsetMetrics(processName, processName, alias, float64(lastOffset))
+		UpdateSyncStateMetrics(processName, clockIdentifier, ptpStats[masterType].LastSyncState())
+		UpdatePTPOffsetMetrics(processName, processName, clockIdentifier, float64(lastOffset))
 	}
 }
 
@@ -457,10 +457,10 @@ func (p *PTPEventManager) ParseTBCLogs(processName, configName, output string, f
 
 	masterType := types.IFace(MasterClockType)
 
-	alias := ptpStats[masterType].Alias()
-	if alias == "" {
-		alias = utils.GetAlias(iface)
-		ptpStats[masterType].SetAlias(alias)
+	clockIdentifier := ptpStats[masterType].ClockIdentifier()
+	if clockIdentifier == "" {
+		clockIdentifier = utils.GetClockIdentifier(iface)
+		ptpStats[masterType].SetClockIdentifier(clockIdentifier)
 	}
 
 	clockState := event.ClockState{
@@ -473,34 +473,34 @@ func (p *PTPEventManager) ParseTBCLogs(processName, configName, output string, f
 		NodeName:    ptpNodeName,
 	}
 
-	SyncState.With(map[string]string{"process": processName, "node": ptpNodeName, "iface": alias}).Set(GetSyncStateID(syncState))
+	SyncState.With(map[string]string{"process": processName, "node": ptpNodeName, "iface": clockIdentifier}).Set(GetSyncStateID(syncState))
 	// status metrics
 	ptpStats[masterType].SetPtpDependentEventState(clockState, ptpStats.HasMetrics(processName), ptpStats.HasMetricHelp(processName))
 
 	// If GM is locked/Freerun/Holdover then ptp state change event
-	masterResource := fmt.Sprintf("%s/%s", alias, MasterClockType)
+	masterResource := fmt.Sprintf("%s/%s", clockIdentifier, MasterClockType)
 	lastClockState := ptpStats[masterType].LastSyncState()
 	ptpStats[masterType].SetLastOffset(offs)
 	lastOffset := ptpStats[masterType].LastOffset()
 
 	// Update the T-BC offset metric on every status report
-	UpdatePTPOffsetMetrics(processName, processName, alias, float64(lastOffset))
+	UpdatePTPOffsetMetrics(processName, processName, clockIdentifier, float64(lastOffset))
 
 	if clockState.State != lastClockState && clockState.State != "" { // publish directly here
 		log.Infof("%s sync state %s, last ptp state is : %s", masterResource, clockState.State, lastClockState)
 		ptpStats[masterType].SetLastSyncState(clockState.State)
 		p.PublishEvent(clockState.State, lastOffset, masterResource, ptp.PtpStateChange)
-		UpdateSyncStateMetrics(processName, alias, ptpStats[masterType].LastSyncState())
+		UpdateSyncStateMetrics(processName, clockIdentifier, ptpStats[masterType].LastSyncState())
 
 		// Impose T-BC state onto the ts2phc process state for the upstream interface
 		// This is needed because ts2phc doesn't update the upstream interface
 		// when ptp4l updates it in the T-BC mode
-		UpdateSyncStateMetrics(ts2phcProcessName, alias, ptpStats[masterType].LastSyncState())
+		UpdateSyncStateMetrics(ts2phcProcessName, clockIdentifier, ptpStats[masterType].LastSyncState())
 
 		// Impose T-BC state onto the ptp4l process state for the same interface
 		// This ensures ptp4l port metrics are consistent with the overall T-BC state
 		// since in T-BC mode, individual port states should reflect the overall clock state
-		UpdateSyncStateMetrics(ptp4lProcessName, alias, ptpStats[masterType].LastSyncState())
+		UpdateSyncStateMetrics(ptp4lProcessName, clockIdentifier, ptpStats[masterType].LastSyncState())
 		// if there is phc2sys ooptions enabled then when the clock is FREERUN annouce OSCLOCK as FREERUN
 		if clockState.State == ptp.FREERUN {
 			// loop thourgh eventManager.PtpConfigMapUpdates.TBCProfiles
@@ -575,10 +575,10 @@ logStatusLoop:
 	}
 
 	if err == nil {
-		alias := ptpStats[ifaceType].Alias()
-		if alias == "" {
-			alias = utils.GetAlias(*iface)
-			ptpStats[ifaceType].SetAlias(alias)
+		clockIdentifier := ptpStats[ifaceType].ClockIdentifier()
+		if clockIdentifier == "" {
+			clockIdentifier = utils.GetClockIdentifier(*iface)
+			ptpStats[ifaceType].SetClockIdentifier(clockIdentifier)
 		}
 		ptpStats[ifaceType].SetPtpDependentEventState(event.ClockState{
 			State:   GetSyncState(syncState),
@@ -595,8 +595,8 @@ logStatusLoop:
 				ppsStatus:       "0=UNAVAILABLE, 1=AVAILABLE",
 			},
 		}, ptpStats.HasMetrics(processName), ptpStats.HasMetricHelp(processName))
-		SyncState.With(map[string]string{"process": processName, "node": ptpNodeName, "iface": alias}).Set(GetSyncStateID(syncState))
-		UpdatePTPOffsetMetrics(processName, processName, alias, dpllOffset)
+		SyncState.With(map[string]string{"process": processName, "node": ptpNodeName, "iface": clockIdentifier}).Set(GetSyncStateID(syncState))
+		UpdatePTPOffsetMetrics(processName, processName, clockIdentifier, dpllOffset)
 	} else {
 		log.Errorf("error parsing dpll %s", err.Error())
 	}
@@ -636,17 +636,17 @@ func (p *PTPEventManager) ParseGNSSLogs(processName, configName, output string, 
 
 	//openshift_ptp_offset_ns{from="gnss",iface="ens2f1",node="cnfde21.ptp.lab.eng.bos.redhat.com",process="gnss"} 0
 	if err == nil {
-		alias := ptpStats[ifaceType].Alias()
-		if alias == "" {
-			alias = utils.GetAlias(*iface)
-			ptpStats[ifaceType].SetAlias(alias)
+		clockIdentifier := ptpStats[ifaceType].ClockIdentifier()
+		if clockIdentifier == "" {
+			clockIdentifier = utils.GetClockIdentifier(*iface)
+			ptpStats[ifaceType].SetClockIdentifier(clockIdentifier)
 		}
 		// last state of GNSS
 		lastState, errState := ptpStats[ifaceType].GetStateState(processName, iface)
 		pLabels := map[string]string{"from": processName, "node": ptpNodeName,
-			"process": processName, "iface": alias}
+			"process": processName, "iface": clockIdentifier}
 		PtpOffset.With(pLabels).Set(gnssOffset)
-		SyncState.With(map[string]string{"process": processName, "node": ptpNodeName, "iface": alias}).Set(GetSyncStateID(syncState))
+		SyncState.With(map[string]string{"process": processName, "node": ptpNodeName, "iface": clockIdentifier}).Set(GetSyncStateID(syncState))
 		ptpStats[ifaceType].SetPtpDependentEventState(event.ClockState{
 			State:       GetSyncState(syncState),
 			Offset:      pointer.Float64(gnssOffset),
@@ -660,7 +660,7 @@ func (p *PTPEventManager) ParseGNSSLogs(processName, configName, output string, 
 		// reduce noise ; if state changed then send events
 		if lastState != GetSyncState(syncState) || errState != nil {
 			log.Infof("%s last state %s and current state %s", processName, lastState, GetSyncState(syncState))
-			masterResource := fmt.Sprintf("%s/%s", alias, MasterClockType)
+			masterResource := fmt.Sprintf("%s/%s", clockIdentifier, MasterClockType)
 			p.publishGNSSEvent(gnssState, gnssOffset, GetSyncState(syncState), masterResource, ptp.GnssStateChange)
 		}
 	}

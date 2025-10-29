@@ -160,17 +160,17 @@ func (ptp4lCfg *PTP4lConfig) ByRole(role types.PtpPortRole) (PTPInterface, error
 	return PTPInterface{}, fmt.Errorf("interfaces not found for the role %d --> %s", role, ptp4lCfg.String())
 }
 
-// GetUnknownAlias ... when master port details are not know, get first interface alias name
-func (ptp4lCfg *PTP4lConfig) GetUnknownAlias() (string, error) {
+// GetUnknownClockIdentifier ... when master port details are not known, get first interface clock identifier
+func (ptp4lCfg *PTP4lConfig) GetUnknownClockIdentifier() (string, error) {
 	for _, p := range ptp4lCfg.Interfaces {
-		return utils.GetAlias(p.Name), nil
+		return utils.GetClockIdentifier(p.Name), nil
 	}
-	return "unknown", fmt.Errorf("interfaces not found for profilfe %s", ptp4lCfg.Profile)
+	return "unknown", fmt.Errorf("interfaces not found for profile %s", ptp4lCfg.Profile)
 }
 
-// GetAliasByInterface ... get alias name by interface name
-func (ptp4lCfg *PTP4lConfig) GetAliasByInterface(p PTPInterface) string {
-	return utils.GetAlias(p.Name)
+// GetClockIdentifierByInterface ... get clock identifier by interface name
+func (ptp4lCfg *PTP4lConfig) GetClockIdentifierByInterface(p PTPInterface) string {
+	return utils.GetClockIdentifier(p.Name)
 }
 
 // UpdateRole ... update role

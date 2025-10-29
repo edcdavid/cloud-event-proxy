@@ -448,7 +448,7 @@ func setup() {
 	statsMaster := stats.NewStats(logPtp4lConfig.Name)
 	statsMaster.SetOffsetSource("master")
 	statsMaster.SetProcessName("ts2phc")
-	statsMaster.SetAlias("ens2fx")
+	statsMaster.SetClockIdentifier("/dev/ptp2")
 
 	statsSlave := stats.NewStats(logPtp4lConfig.Name)
 	statsSlave.SetOffsetSource("phc")
@@ -462,7 +462,7 @@ func setup() {
 	statsPHCDualFollower.SetOffsetSource("master")
 	statsPHCDualFollower.SetProcessName("ptp4l")
 	statsPHCDualFollower.SetLastSyncState("LOCKED")
-	statsPHCDualFollower.SetAlias("ens3fx")
+	statsPHCDualFollower.SetClockIdentifier("/dev/ptp3")
 
 	statsRTDualFollower := stats.NewStats(logPtp4lConfigDualFollower.Name)
 	statsRTDualFollower.SetOffsetSource("phc")
