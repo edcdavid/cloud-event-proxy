@@ -158,7 +158,7 @@ func TestGetCurrentStatOverrideFn(t *testing.T) {
 			expectedSyncState:       ptpTypes.LOCKED,
 			eventSource:             ptpEvent.PtpLockState,
 			eventType:               ptpEvent.PtpStateChange,
-			expectedResourceAddress: fmt.Sprintf("/cluster/node/%s/%s/%s", nodeName, "ens1fx", MasterClockType),
+			expectedResourceAddress: fmt.Sprintf("/cluster/node/%s/%s/%s", nodeName, "/dev/ptp1", MasterClockType),
 			statsData: []statsData{
 				{clockType: MasterClockType, configName: "ptp4l.0.config", processName: "ptp4l", clockIdentifier: "/dev/ptp1", iface: "ens1f0", syncState: ptpEvent.LOCKED},
 			},

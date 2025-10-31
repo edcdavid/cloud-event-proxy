@@ -29,6 +29,7 @@ import (
 	"github.com/redhat-cne/sdk-go/pkg/event"
 
 	"github.com/redhat-cne/cloud-event-proxy/plugins/ptp_operator/ptp4lconf"
+	"github.com/redhat-cne/cloud-event-proxy/plugins/ptp_operator/utils"
 
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -424,7 +425,8 @@ func processPtp4lConfigFileUpdates() {
 						if !isExists(ptpInterface.Name) {
 							log.Errorf("config updated and interface not found, deleting %s", ptpInterface.Name)
 							// Remove interface role metrics if the interface has been removed from ptpConfig
-							ptpMetrics.DeleteInterfaceRoleMetrics("", ptpInterface.Name)
+							clockIdentifier := utils.GetClockIdentifier(ptpInterface.Name)
+							ptpMetrics.DeleteInterfaceRoleMetrics("", clockIdentifier)
 						}
 					}
 				}
@@ -479,8 +481,9 @@ func processPtp4lConfigFileUpdates() {
 						}
 						ptpInterfaces = append(ptpInterfaces, ptpIFace)
 
-						// Update interface role metrics
-						ptpMetrics.UpdateInterfaceRoleMetrics(ptp4lProcessName, *ptpInterface, role)
+						// Update interface role metrics with clock identifier
+						clockIdentifier := utils.GetClockIdentifier(*ptpInterface)
+						ptpMetrics.UpdateInterfaceRoleMetrics(ptp4lProcessName, clockIdentifier, role)
 					}
 				}
 				// updated ptp4lConfig is ready
@@ -558,14 +561,15 @@ func processPtp4lConfigFileUpdates() {
 					//clean up any ha metrics
 					ptpMetrics.DeletePTPHAMetrics(ptpConfig.Profile)
 					for _, ptpInterface := range ptpConfig.Interfaces {
-						ptpMetrics.DeleteInterfaceRoleMetrics(ptp4lProcessName, ptpInterface.Name)
+						clockIdentifier := utils.GetClockIdentifier(ptpInterface.Name)
+						ptpMetrics.DeleteInterfaceRoleMetrics(ptp4lProcessName, clockIdentifier)
 						// Clean up ts2phc and ptp4l sync state metrics for T-BC profiles
 						// These metrics are created by T-BC state synchronization logic
 						if eventManager.GetProfileType(ptpConfig.Profile) == ptp4lconf.TBC {
 							ptpMetrics.SyncState.Delete(prometheus.Labels{
-								"process": ts2PhcProcessName, "node": eventManager.NodeName(), "iface": ptpInterface.Name})
+								"process": ts2PhcProcessName, "node": eventManager.NodeName(), "iface": clockIdentifier})
 							ptpMetrics.SyncState.Delete(prometheus.Labels{
-								"process": ptp4lProcessName, "node": eventManager.NodeName(), "iface": ptpInterface.Name})
+								"process": ptp4lProcessName, "node": eventManager.NodeName(), "iface": clockIdentifier})
 						}
 					}
 					if t, ok2 := eventManager.PtpConfigMapUpdates.EventThreshold[ptpConfig.Profile]; ok2 {

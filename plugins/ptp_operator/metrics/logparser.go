@@ -390,7 +390,7 @@ func (p *PTPEventManager) ParseGMLogs(processName, configName, output string, fi
 		clockIdentifier = utils.GetClockIdentifier(iface)
 		ptpStats[masterType].SetClockIdentifier(clockIdentifier)
 	}
-	SyncState.With(map[string]string{"process": processName, "node": ptpNodeName, "iface": clockIdentifier}).Set(GetSyncStateID(syncState))
+	SyncState.With(map[string]string{"process": processName, "node": ptpNodeName, "clkid": clockIdentifier}).Set(GetSyncStateID(syncState))
 	// status metrics
 	ptpStats[masterType].SetPtpDependentEventState(clockState, ptpStats.HasMetrics(processName), ptpStats.HasMetricHelp(processName))
 
@@ -473,7 +473,7 @@ func (p *PTPEventManager) ParseTBCLogs(processName, configName, output string, f
 		NodeName:    ptpNodeName,
 	}
 
-	SyncState.With(map[string]string{"process": processName, "node": ptpNodeName, "iface": clockIdentifier}).Set(GetSyncStateID(syncState))
+	SyncState.With(map[string]string{"process": processName, "node": ptpNodeName, "clkid": clockIdentifier}).Set(GetSyncStateID(syncState))
 	// status metrics
 	ptpStats[masterType].SetPtpDependentEventState(clockState, ptpStats.HasMetrics(processName), ptpStats.HasMetricHelp(processName))
 
@@ -595,7 +595,7 @@ logStatusLoop:
 				ppsStatus:       "0=UNAVAILABLE, 1=AVAILABLE",
 			},
 		}, ptpStats.HasMetrics(processName), ptpStats.HasMetricHelp(processName))
-		SyncState.With(map[string]string{"process": processName, "node": ptpNodeName, "iface": clockIdentifier}).Set(GetSyncStateID(syncState))
+		SyncState.With(map[string]string{"process": processName, "node": ptpNodeName, "clkid": clockIdentifier}).Set(GetSyncStateID(syncState))
 		UpdatePTPOffsetMetrics(processName, processName, clockIdentifier, dpllOffset)
 	} else {
 		log.Errorf("error parsing dpll %s", err.Error())
@@ -644,9 +644,9 @@ func (p *PTPEventManager) ParseGNSSLogs(processName, configName, output string, 
 		// last state of GNSS
 		lastState, errState := ptpStats[ifaceType].GetStateState(processName, iface)
 		pLabels := map[string]string{"from": processName, "node": ptpNodeName,
-			"process": processName, "iface": clockIdentifier}
+			"process": processName, "clkid": clockIdentifier}
 		PtpOffset.With(pLabels).Set(gnssOffset)
-		SyncState.With(map[string]string{"process": processName, "node": ptpNodeName, "iface": clockIdentifier}).Set(GetSyncStateID(syncState))
+		SyncState.With(map[string]string{"process": processName, "node": ptpNodeName, "clkid": clockIdentifier}).Set(GetSyncStateID(syncState))
 		ptpStats[ifaceType].SetPtpDependentEventState(event.ClockState{
 			State:       GetSyncState(syncState),
 			Offset:      pointer.Float64(gnssOffset),

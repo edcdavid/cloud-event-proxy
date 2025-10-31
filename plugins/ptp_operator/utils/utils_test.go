@@ -28,7 +28,7 @@ func Test_GetClockIdentifier(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%s->%s", tc.ifname, tc.expectedClockIdentifier), func(t *testing.T) {
-			assert.Equal(t, tc.expectedClockIdentifier, GetClockIdentifier(tc.ifname))
+			assert.Equal(t, tc.expectedClockIdentifier, utils.GetClockIdentifier(tc.ifname))
 		})
 	}
 }

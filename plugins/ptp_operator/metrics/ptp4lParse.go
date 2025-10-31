@@ -11,6 +11,7 @@ import (
 	"github.com/redhat-cne/cloud-event-proxy/plugins/ptp_operator/ptp4lconf"
 	"github.com/redhat-cne/cloud-event-proxy/plugins/ptp_operator/stats"
 	"github.com/redhat-cne/cloud-event-proxy/plugins/ptp_operator/types"
+	"github.com/redhat-cne/cloud-event-proxy/plugins/ptp_operator/utils"
 	"github.com/redhat-cne/sdk-go/pkg/event/ptp"
 	log "github.com/sirupsen/logrus"
 )
@@ -100,8 +101,9 @@ func (p *PTPEventManager) ParsePTP4l(processName, configName, profileName, outpu
 				log.Errorf("failed to save metrics to store: %s", err)
 			}
 
-			// update role metrics
-			UpdateInterfaceRoleMetrics(processName, ptpIFace, role)
+			// update role metrics with clock identifier
+			clockIdentifier := utils.GetClockIdentifier(ptpIFace)
+			UpdateInterfaceRoleMetrics(processName, clockIdentifier, role)
 		}
 		if ptp4lCfg.ProfileType == ptp4lconf.TBC || lastRole != types.SLAVE { //tsphc doesn't have slave port and doesnt have fault state yet
 			return // no need to go to holdover state if the Fault was not in master(slave) port

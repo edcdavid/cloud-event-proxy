@@ -22,7 +22,7 @@ var (
 			Subsystem: ptpSubsystem,
 			Name:      "offset_ns",
 			Help:      "",
-		}, []string{"from", "process", "node", "iface"})
+		}, []string{"from", "process", "node", "clkid"})
 
 	// PtpMaxOffset  metrics for max offset
 	PtpMaxOffset = prometheus.NewGaugeVec(
@@ -31,7 +31,7 @@ var (
 			Subsystem: ptpSubsystem,
 			Name:      "max_offset_ns",
 			Help:      "",
-		}, []string{"from", "process", "node", "iface"})
+		}, []string{"from", "process", "node", "clkid"})
 
 	// PtpFrequencyAdjustment metrics to show frequency adjustment
 	PtpFrequencyAdjustment = prometheus.NewGaugeVec(
@@ -40,7 +40,7 @@ var (
 			Subsystem: ptpSubsystem,
 			Name:      "frequency_adjustment_ns",
 			Help:      "",
-		}, []string{"from", "process", "node", "iface"})
+		}, []string{"from", "process", "node", "clkid"})
 
 	// PtpDelay metrics to show delay
 	PtpDelay = prometheus.NewGaugeVec(
@@ -49,7 +49,7 @@ var (
 			Subsystem: ptpSubsystem,
 			Name:      "delay_ns",
 			Help:      "",
-		}, []string{"from", "process", "node", "iface"})
+		}, []string{"from", "process", "node", "clkid"})
 
 	// SyncState metrics to show current clock state
 	SyncState = prometheus.NewGaugeVec(
@@ -58,7 +58,7 @@ var (
 			Subsystem: ptpSubsystem,
 			Name:      "clock_state",
 			Help:      "0 = FREERUN, 1 = LOCKED, 2 = HOLDOVER",
-		}, []string{"process", "node", "iface"})
+		}, []string{"process", "node", "clkid"})
 
 	// NmeaStatus metrics to show current nmea status
 	NmeaStatus = prometheus.NewGaugeVec(
@@ -67,7 +67,7 @@ var (
 			Subsystem: ptpSubsystem,
 			Name:      "nmea_status",
 			Help:      "0 = UNAVAILABLE, 1 = AVAILABLE",
-		}, []string{"process", "node", "iface"})
+		}, []string{"process", "node", "clkid"})
 
 	// Threshold metrics to show current ptp threshold
 	Threshold = prometheus.NewGaugeVec(
@@ -85,7 +85,7 @@ var (
 			Subsystem: ptpSubsystem,
 			Name:      "interface_role",
 			Help:      "0 = PASSIVE, 1 = SLAVE, 2 = MASTER, 3 = FAULTY, 4 = UNKNOWN, 5 = LISTENING",
-		}, []string{"process", "node", "iface"})
+		}, []string{"process", "node", "clkid"})
 
 	// ClockClassMetrics metrics to show current clock class for the node
 	ClockClassMetrics = prometheus.NewGaugeVec(
@@ -173,22 +173,22 @@ func RegisterMetrics(nodeName string) {
 // UpdatePTPMetrics ... update ptp metrics
 func UpdatePTPMetrics(metricsType, process, eventResourceName string, offset, maxOffset, frequencyAdjustment, delay float64) {
 	PtpOffset.With(prometheus.Labels{"from": metricsType,
-		"process": process, "node": ptpNodeName, "iface": eventResourceName}).Set(offset)
+		"process": process, "node": ptpNodeName, "clkid": eventResourceName}).Set(offset)
 
 	PtpMaxOffset.With(prometheus.Labels{"from": metricsType,
-		"process": process, "node": ptpNodeName, "iface": eventResourceName}).Set(maxOffset)
+		"process": process, "node": ptpNodeName, "clkid": eventResourceName}).Set(maxOffset)
 
 	PtpFrequencyAdjustment.With(prometheus.Labels{"from": metricsType,
-		"process": process, "node": ptpNodeName, "iface": eventResourceName}).Set(frequencyAdjustment)
+		"process": process, "node": ptpNodeName, "clkid": eventResourceName}).Set(frequencyAdjustment)
 
 	PtpDelay.With(prometheus.Labels{"from": metricsType,
-		"process": process, "node": ptpNodeName, "iface": eventResourceName}).Set(delay)
+		"process": process, "node": ptpNodeName, "clkid": eventResourceName}).Set(delay)
 }
 
 // UpdatePTPOffsetMetrics ... update ptp offset metrics
 func UpdatePTPOffsetMetrics(metricsType, process, eventResourceName string, offset float64) {
 	PtpOffset.With(prometheus.Labels{"from": metricsType,
-		"process": process, "node": ptpNodeName, "iface": eventResourceName}).Set(offset)
+		"process": process, "node": ptpNodeName, "clkid": eventResourceName}).Set(offset)
 }
 
 // DeletedPTPMetrics ... update metrics for deleted ptp config
@@ -231,13 +231,13 @@ func UpdateSyncStateMetrics(process, iface string, state ptp.SyncState) {
 		return
 	}
 	SyncState.With(prometheus.Labels{
-		"process": process, "node": ptpNodeName, "iface": iface}).Set(clockState)
+		"process": process, "node": ptpNodeName, "clkid": iface}).Set(clockState)
 }
 
 // UpdateNmeaStatusMetrics ... update nmea status metrics
 func UpdateNmeaStatusMetrics(process, iface string, status float64) {
 	NmeaStatus.With(prometheus.Labels{
-		"process": process, "node": ptpNodeName, "iface": iface}).Set(status)
+		"process": process, "node": ptpNodeName, "clkid": iface}).Set(status)
 }
 
 // UpdatePTPHaMetrics ... update ptp ha  status metrics
@@ -249,15 +249,15 @@ func UpdatePTPHaMetrics(profile string, status int64) {
 // UpdateInterfaceRoleMetrics ... update interface role metrics
 func UpdateInterfaceRoleMetrics(process, ptpInterface string, role types.PtpPortRole) {
 	InterfaceRole.With(prometheus.Labels{
-		"process": process, "node": ptpNodeName, "iface": ptpInterface}).Set(float64(role))
+		"process": process, "node": ptpNodeName, "clkid": ptpInterface}).Set(float64(role))
 }
 
 // DeleteInterfaceRoleMetrics ... delete interface role metrics
 func DeleteInterfaceRoleMetrics(process, ptpInterface string) {
 	if process != "" {
-		InterfaceRole.Delete(prometheus.Labels{"process": process, "iface": ptpInterface, "node": ptpNodeName})
+		InterfaceRole.Delete(prometheus.Labels{"process": process, "clkid": ptpInterface, "node": ptpNodeName})
 	} else {
-		InterfaceRole.Delete(prometheus.Labels{"iface": ptpInterface, "node": ptpNodeName})
+		InterfaceRole.Delete(prometheus.Labels{"clkid": ptpInterface, "node": ptpNodeName})
 	}
 }
 
@@ -324,6 +324,6 @@ func DeleteSyncEMetrics(process, configName string, synceStats stats.SyncEStats)
 			"process": process, "node": ptpNodeName, "profile": configName, "iface": iface, "device": synceStats.Name, "network_option": strconv.Itoa(synceStats.NetworkOption)})
 
 		SyncState.Delete(prometheus.Labels{
-			"process": process, "node": ptpNodeName, "iface": iface})
+			"process": process, "node": ptpNodeName, "clkid": iface})
 	}
 }

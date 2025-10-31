@@ -18,6 +18,7 @@ import (
 	"github.com/redhat-cne/cloud-event-proxy/plugins/ptp_operator/ptp4lconf"
 	"github.com/redhat-cne/cloud-event-proxy/plugins/ptp_operator/stats"
 	"github.com/redhat-cne/cloud-event-proxy/plugins/ptp_operator/types"
+	"github.com/redhat-cne/cloud-event-proxy/plugins/ptp_operator/utils"
 	ceevent "github.com/redhat-cne/sdk-go/pkg/event"
 	"github.com/redhat-cne/sdk-go/pkg/event/ptp"
 	log "github.com/sirupsen/logrus"
@@ -789,5 +790,7 @@ func updateRoleMetricFromData(configName, portName string, portRole types.PtpPor
 	if len(configNameParts) > 0 {
 		process = configNameParts[0]
 	}
-	UpdateInterfaceRoleMetrics(process, portName, portRole)
+	// Use clock identifier instead of raw interface name for metrics
+	clockIdentifier := utils.GetClockIdentifier(portName)
+	UpdateInterfaceRoleMetrics(process, clockIdentifier, portRole)
 }
