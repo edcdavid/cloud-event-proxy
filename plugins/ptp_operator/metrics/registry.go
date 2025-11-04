@@ -194,15 +194,15 @@ func UpdatePTPOffsetMetrics(metricsType, process, eventResourceName string, offs
 // DeletedPTPMetrics ... update metrics for deleted ptp config
 func DeletedPTPMetrics(clockType, processName, eventResourceName string) {
 	PtpOffset.Delete(prometheus.Labels{"from": clockType,
-		"process": processName, "node": ptpNodeName, "iface": eventResourceName})
+		"process": processName, "node": ptpNodeName, "clkid": eventResourceName})
 	PtpMaxOffset.Delete(prometheus.Labels{"from": clockType,
-		"process": processName, "node": ptpNodeName, "iface": eventResourceName})
+		"process": processName, "node": ptpNodeName, "clkid": eventResourceName})
 	PtpFrequencyAdjustment.Delete(prometheus.Labels{"from": clockType,
-		"process": processName, "node": ptpNodeName, "iface": eventResourceName})
+		"process": processName, "node": ptpNodeName, "clkid": eventResourceName})
 	PtpDelay.Delete(prometheus.Labels{"from": clockType,
-		"process": processName, "node": ptpNodeName, "iface": eventResourceName})
+		"process": processName, "node": ptpNodeName, "clkid": eventResourceName})
 	SyncState.Delete(prometheus.Labels{
-		"process": processName, "node": ptpNodeName, "iface": eventResourceName})
+		"process": processName, "node": ptpNodeName, "clkid": eventResourceName})
 }
 
 // DeleteThresholdMetrics ... delete threshold metrics

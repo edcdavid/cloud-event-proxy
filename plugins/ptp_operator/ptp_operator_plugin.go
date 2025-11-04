@@ -567,9 +567,9 @@ func processPtp4lConfigFileUpdates() {
 						// These metrics are created by T-BC state synchronization logic
 						if eventManager.GetProfileType(ptpConfig.Profile) == ptp4lconf.TBC {
 							ptpMetrics.SyncState.Delete(prometheus.Labels{
-								"process": ts2PhcProcessName, "node": eventManager.NodeName(), "iface": clockIdentifier})
+								"process": ts2PhcProcessName, "node": eventManager.NodeName(), "clkid": clockIdentifier})
 							ptpMetrics.SyncState.Delete(prometheus.Labels{
-								"process": ptp4lProcessName, "node": eventManager.NodeName(), "iface": clockIdentifier})
+								"process": ptp4lProcessName, "node": eventManager.NodeName(), "clkid": clockIdentifier})
 						}
 					}
 					if t, ok2 := eventManager.PtpConfigMapUpdates.EventThreshold[ptpConfig.Profile]; ok2 {
@@ -597,7 +597,7 @@ func processPtp4lConfigFileUpdates() {
 								if p.HasProcessEnabled(gnssProcessName) {
 									if ptpMetrics.NmeaStatus != nil {
 										ptpMetrics.NmeaStatus.Delete(prometheus.Labels{
-											"process": ts2PhcProcessName, "node": eventManager.NodeName(), "iface": p.ClockIdentifier()})
+											"process": ts2PhcProcessName, "node": eventManager.NodeName(), "clkid": p.ClockIdentifier()})
 									}
 									masterResource := fmt.Sprintf("%s/%s", p.ClockIdentifier(), MasterClockType)
 									eventManager.PublishEvent(ptp.FREERUN, ptpMetrics.FreeRunOffsetValue, masterResource, ptp.GnssStateChange)

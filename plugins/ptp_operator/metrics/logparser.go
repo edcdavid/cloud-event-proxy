@@ -764,7 +764,7 @@ func (p *PTPEventManager) ParseSyncELogs(processName, configName, output string,
 		if synceLog.EECState != "" {
 			masterResource := fmt.Sprintf("%s/%s", synceLog.Device, synceLog.Interface)
 			p.publishSyncEEvent(GetSyncState(synceLog.State), masterResource, 0, 0, synceLog.ExtendedQlEnabled, ptp.SynceStateChange)
-			SyncState.With(map[string]string{"process": processName, "node": ptpNodeName, "iface": synceLog.Interface}).Set(GetSyncStateID(synceLog.State))
+			SyncState.With(map[string]string{"process": processName, "node": ptpNodeName, "clkid": synceLog.Interface}).Set(GetSyncStateID(synceLog.State))
 		} else {
 			masterResource := fmt.Sprintf("%s/%s", synceLog.Device, synceLog.Interface)
 			p.publishSyncEEvent("", masterResource, synceLog.QL, synceLog.ExtQL, synceLog.ExtendedQlEnabled, ptp.SynceClockQualityChange)
