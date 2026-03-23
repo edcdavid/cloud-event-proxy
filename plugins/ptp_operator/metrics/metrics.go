@@ -130,10 +130,8 @@ func (p *PTPEventManager) ExtractMetrics(msg string) {
 	}
 
 	// Check for CLOCK_CLASS_CHANGE before interface validation
-	// Clock class is a global property that doesn't require interface information
-	// This is critical for dual NIC configurations where the second config file
-	// may not have interfaces loaded yet when clock class events arrive
 	if strings.Contains(output, classChangeIdentifier) {
+		log.Infof("DEBUG CEP ExtractMetrics dispatching CLOCK_CLASS_CHANGE: process=%s config=%s profile=%s", processName, configName, profileName)
 		p.ParsePTP4l(processName, configName, profileName, output, fields,
 			ptp4lconf.PTPInterface{}, ptp4lCfg, ptpStats)
 		return

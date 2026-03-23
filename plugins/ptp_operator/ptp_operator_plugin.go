@@ -179,6 +179,7 @@ func processConfigCreate(ptpConfigEvent *ptp4lconf.PtpConfigUpdate) {
 
 // Start ptp plugin to process events,metrics and status, expects rest api available to create publisher and subscriptions
 func Start(wg *sync.WaitGroup, configuration *common.SCConfiguration, _ func(e interface{}) error) error { //nolint:deadcode,unused
+	log.Infof("DEBUG CEP ptp_operator_plugin.Start BUILD=clock-class-fix-v2")
 	// The name of NodePtpDevice CR for this node is equal to the node name
 	nodeName := os.Getenv("NODE_NAME")
 	if nodeName == "" {

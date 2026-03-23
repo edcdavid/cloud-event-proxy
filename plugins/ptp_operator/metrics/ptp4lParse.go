@@ -25,33 +25,38 @@ func (p *PTPEventManager) ParsePTP4l(processName, configName, profileName, outpu
 	ptpInterface ptp4lconf.PTPInterface, ptp4lCfg *ptp4lconf.PTP4lConfig, ptpStats stats.PTPStats) {
 	var err error
 	if strings.Contains(output, classChangeIdentifier) {
+		log.Infof("DEBUG CEP ParsePTP4l CLOCK_CLASS_CHANGE received: process=%s config=%s output=%q fields=%v", processName, configName, output, fields)
 		if len(fields) < 5 {
 			log.Errorf("clock class not in right format %s", output)
 			return
 		}
-		// Use ptpStats.GetMainClockName instead of 'master' for this statistic because clock class is a property
-		// of the main clock in the case of multiple configurations.
 		mainClock := ptpStats.GetMainClockName()
 		ptpStats.CheckSource(mainClock, configName, ptp4lProcessName)
-		// ptp4l 1646672953  ptp4l.0.config  CLOCK_CLASS_CHANGE 165.000000
 		var clockClass float64
 		clockClass, err = strconv.ParseFloat(fields[4], 64)
 		if err != nil {
-			log.Error("error parsing clock class change")
-		} else if ptpStats[mainClock].ClockClass() != int64(clockClass) { // only if there is a change
-			var alias string
-			if m, ok := ptpStats[mainClock]; ok {
-				alias = m.Alias()
-			}
-			if alias == "" {
-				alias, _ = ptp4lCfg.GetUnknownAlias()
-			}
-			masterResource := fmt.Sprintf("%s/%s", alias, MasterClockType)
+			log.Errorf("error parsing clock class change: %v", err)
+		} else {
+			prevClockClass := ptpStats[mainClock].ClockClass()
+			log.Infof("DEBUG CEP ParsePTP4l config=%s mainClock=%s prevClockClass=%d newClockClass=%f", configName, mainClock, prevClockClass, clockClass)
+			if prevClockClass != int64(clockClass) {
+				var alias string
+				if m, ok := ptpStats[mainClock]; ok {
+					alias = m.Alias()
+				}
+				if alias == "" {
+					alias, _ = ptp4lCfg.GetUnknownAlias()
+				}
+				masterResource := fmt.Sprintf("%s/%s", alias, MasterClockType)
 
-			ptpStats[mainClock].SetClockClass(int64(clockClass))
-			ClockClassMetrics.With(prometheus.Labels{
-				"process": processName, "config": configName, "node": ptpNodeName}).Set(clockClass)
-			p.PublishClockClassEvent(clockClass, masterResource, ptp.PtpClockClassChange)
+				ptpStats[mainClock].SetClockClass(int64(clockClass))
+				ClockClassMetrics.With(prometheus.Labels{
+					"process": processName, "config": configName, "node": ptpNodeName}).Set(clockClass)
+				log.Infof("DEBUG CEP ParsePTP4l SET ClockClassMetrics process=%s config=%s node=%s value=%f", processName, configName, ptpNodeName, clockClass)
+				p.PublishClockClassEvent(clockClass, masterResource, ptp.PtpClockClassChange)
+			} else {
+				log.Infof("DEBUG CEP ParsePTP4l SKIPPED (same clock class) config=%s clockClass=%f", configName, clockClass)
+			}
 		}
 	} else if strings.Contains(output, " port ") && processName == ptp4lProcessName { // ignore anything reported by other process
 		portID, role, syncState := extractPTP4lEventState(output)
