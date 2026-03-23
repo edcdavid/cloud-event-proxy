@@ -85,6 +85,23 @@ var logPtp4lConfigDualFollower = &ptp4lconf.PTP4lConfig{
 	},
 }
 
+// DualNIC with empty interfaces - simulates second NIC config not fully loaded yet
+// We keep one interface to ensure GetUnknownAlias works, but this simulates
+// the race condition where config exists but isn't fully initialized
+var logPtp4lConfigDualNICEmpty = &ptp4lconf.PTP4lConfig{
+	Name:    "ptp4l.1.config",
+	Profile: "dualNIC-BC",
+	Interfaces: []*ptp4lconf.PTPInterface{
+		{
+			Name:     "ens4f0",
+			PortID:   1,
+			PortName: "port 1",
+			Role:     1, // slave
+		},
+	},
+	Sections: map[string]map[string]string{},
+}
+
 var ptpEventManager *metrics.PTPEventManager
 var scConfig *common.SCConfiguration
 var resourcePrefix = ""
@@ -358,6 +375,17 @@ var testCases = []TestCase{
 		logPtp4lConfigName:             logPtp4lConfig.Name,
 	},
 	{
+		log:                            "ptp4l[1000000620]:[ptp4l.1.config] CLOCK_CLASS_CHANGE 135.000000",
+		process:                        "ptp4l",
+		iface:                          "master",
+		lastSyncState:                  ptp.LOCKED,
+		expectedClockClassMetricsCheck: true,
+		expectedClockClassMetrics:      135,
+		expectedEvent:                  []ptp.EventType{ptp.PtpClockClassChange},
+		logPtp4lConfigName:             logPtp4lConfigDualNICEmpty.Name,
+		skipSetLastSyncState:           true,
+	},
+	{
 		log:                                 "phc2sys[1000000700]: [ptp4l.0.config] CLOCK_REALTIME phc offset       -62 s0 freq  -78368 delay   1100",
 		from:                                "phc",
 		process:                             "phc2sys",
@@ -443,6 +471,7 @@ func setup() {
 	alias.SetAlias("ens7f0", "ens7fx")
 	alias.SetAlias("ens3f0", "ens3fx")
 	alias.SetAlias("ens3f1", "ens3fx")
+	alias.SetAlias("ens4f0", "ens4fx")
 
 	mockFS := &metrics.MockFileSystem{}
 	scConfig = &common.SCConfiguration{StorePath: "/tmp/store"}
@@ -489,6 +518,16 @@ func setup() {
 	ptpEventManager.Stats[types.ConfigName(logPtp4lConfigDualFollower.Name)][types.IFace("CLOCK_REALTIME")] = statsRTDualFollower
 	ptpEventManager.Stats[types.ConfigName(logPtp4lConfigDualFollower.Name)][types.IFace("ens3f0")] = statsPHCDualFollower
 	ptpEventManager.Stats[types.ConfigName(logPtp4lConfigDualFollower.Name)][types.IFace("ens3f1")] = statsPHCDualFollower
+
+	// DualNIC with empty interfaces - tests clock class change with uninitialized config
+	ptpEventManager.AddPTPConfig(types.ConfigName(logPtp4lConfigDualNICEmpty.Name), logPtp4lConfigDualNICEmpty)
+	statsDualNICEmpty := stats.NewStats(logPtp4lConfigDualNICEmpty.Name)
+	statsDualNICEmpty.SetOffsetSource("master")
+	statsDualNICEmpty.SetProcessName("ptp4l")
+	statsDualNICEmpty.SetClockClass(0)
+	// Note: Not setting alias initially to test the GetUnknownAlias() fallback
+	ptpEventManager.Stats[types.ConfigName(logPtp4lConfigDualNICEmpty.Name)] = make(stats.PTPStats)
+	ptpEventManager.Stats[types.ConfigName(logPtp4lConfigDualNICEmpty.Name)][types.IFace("master")] = statsDualNICEmpty
 
 	// chronyd configuration
 	chronydConfig := &ptp4lconf.PTP4lConfig{
@@ -568,10 +607,14 @@ func Test_ExtractMetrics(t *testing.T) {
 				nmeaStatus := metrics.NmeaStatus.With(map[string]string{"process": tc.process, "node": tc.node, "iface": tc.iface})
 				assert.Equal(tc.expectedNmeaStatus, testutil.ToFloat64(nmeaStatus), "NmeaStatus does not match\n%s", tc.String())
 			}
-			if tc.expectedClockClassMetricsCheck {
-				clockClassMetrics := metrics.ClockClassMetrics.With(map[string]string{"process": tc.process, "config": "ptp4l.0.config", "node": tc.node})
-				assert.Equal(tc.expectedClockClassMetrics, testutil.ToFloat64(clockClassMetrics), "ClockClassMetrics does not match\n%s", tc.String())
+		if tc.expectedClockClassMetricsCheck {
+			configName := tc.logPtp4lConfigName
+			if configName == "" {
+				configName = "ptp4l.0.config" // fallback for backward compatibility
 			}
+			clockClassMetrics := metrics.ClockClassMetrics.With(map[string]string{"process": tc.process, "config": configName, "node": tc.node})
+			assert.Equal(tc.expectedClockClassMetrics, testutil.ToFloat64(clockClassMetrics), "ClockClassMetrics does not match\n%s", tc.String())
+		}
 			assert.Equal(tc.expectedEvent, ptpEventManager.GetMockEvent(), "Expected Event does not match\n%s", tc.String())
 		})
 	}

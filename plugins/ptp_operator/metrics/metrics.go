@@ -129,6 +129,16 @@ func (p *PTPEventManager) ExtractMetrics(msg string) {
 		return
 	}
 
+	// Check for CLOCK_CLASS_CHANGE before interface validation
+	// Clock class is a global property that doesn't require interface information
+	// This is critical for dual NIC configurations where the second config file
+	// may not have interfaces loaded yet when clock class events arrive
+	if strings.Contains(output, classChangeIdentifier) {
+		p.ParsePTP4l(processName, configName, profileName, output, fields,
+			ptp4lconf.PTPInterface{}, ptp4lCfg, ptpStats)
+		return
+	}
+
 	//TODO: need better validation here
 	if processName == syncE4lProcessName && configName == "" { // hack to skip for synce4l
 		log.Infof("%s skipped parsing %s output %s\n", processName, configName, output)
