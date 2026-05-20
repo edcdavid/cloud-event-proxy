@@ -23,6 +23,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -79,6 +80,7 @@ var (
 	config         *common.SCConfiguration
 	eventManager   *ptpMetrics.PTPEventManager
 	aliasReady     chan struct{}
+	connSeq        uint64
 )
 
 // restartProcess replaces the current process with a fresh copy of itself via
@@ -515,27 +517,35 @@ func listenToSocket(wg *sync.WaitGroup) {
 }
 
 func processMessages(c net.Conn) {
+	connID := atomic.AddUint64(&connSeq, 1)
 	<-aliasReady // wait until alias found and this is closed
-	log.Info("alias found, starting to process messages")
+	log.Infof("alias found, starting to process messages (conn_id=%d)", connID)
 	// Request a full state re-emit in a separate goroutine so the scanner
 	// can start reading immediately. TriggerLogs writes emit data back through
 	// this same socket connection; if we block here waiting for the HTTP response,
 	// nobody reads the socket, the kernel buffer fills, and the emit handler blocks.
 	if eventManager != nil {
 		go func() {
+			log.Infof("[OCPBUGS-85092] TriggerLogs start (conn_id=%d)", connID)
 			if err := eventManager.TriggerLogs(); err != nil {
 				log.Warnf("failed to trigger logs on new connection: %v", err)
+				log.Warnf("[OCPBUGS-85092] TriggerLogs failed (conn_id=%d): %v", connID, err)
+				return
 			}
+			log.Infof("[OCPBUGS-85092] TriggerLogs completed (conn_id=%d)", connID)
 		}()
 	}
 	scanner := bufio.NewScanner(c)
 	for {
 		ok := scanner.Scan()
 		if !ok {
-			log.Error("error reading socket input, retrying")
+			log.Errorf("error reading socket input, retrying (conn_id=%d)", connID)
 			break
 		}
 		msg := scanner.Text()
+		if strings.Contains(msg, "master offset") || strings.Contains(msg, " port ") {
+			log.Infof("[OCPBUGS-85092] socket message (conn_id=%d): %s", connID, msg)
+		}
 		if msg == restartCommand {
 			restartProcess("restart requested by daemon via socket")
 			return // unreachable after exec

@@ -252,6 +252,10 @@ func (p *PTPEventManager) ExtractMetrics(msg string) {
 				// for ts2phc there is no slave interface configuration
 				// fort pt4l find the slave configured
 				ptpInterface, _ = ptp4lCfg.ByRole(types.SLAVE)
+				if interfaceName == MasterClockType {
+					log.Infof("[OCPBUGS-85092] master-offset parse cfg=%s sync=%s offset=%d byRole_slave=%s roles=%s raw=%s",
+						configName, syncState, int64(ptpOffset), ptpInterface.Name, roleSnapshot(ptp4lCfg), output)
+				}
 			}
 			ptpStats.CheckSource(types.IFace(interfaceName), configName, processName)
 			ptpStats[types.IFace(interfaceName)].SetOffsetSource(offsetSource)
@@ -310,6 +314,8 @@ func (p *PTPEventManager) ExtractMetrics(msg string) {
 					// For TBC, ptp4l clock_state comes directly from log (s0/s2), never HOLDOVER
 					if ptp4lCfg.ProfileType != ptp4lconf.TBC {
 						masterResource := fmt.Sprintf("%s/%s", aliasValue, MasterClockType)
+						log.Infof("[OCPBUGS-85092] GenPTPEvent ptp4l master cfg=%s alias=%s slave=%s sync=%s last=%s offset=%d",
+							configName, aliasValue, ptpInterface.Name, syncState, ptpStats[types.IFace(interfaceName)].LastSyncState(), int64(ptpOffset))
 						p.GenPTPEvent(profileName, ptpStats[types.IFace(interfaceName)], masterResource, int64(ptpOffset), syncState, ptp.PtpStateChange)
 						UpdateSyncStateMetrics(processName, aliasValue, ptpStats[types.IFace(interfaceName)].LastSyncState())
 					} else {
@@ -318,6 +324,9 @@ func (p *PTPEventManager) ExtractMetrics(msg string) {
 						UpdateSyncStateMetrics(processName, aliasValue, syncState)
 					}
 					ptpStats[types.IFace(interfaceName)].AddValue(int64(ptpOffset))
+				} else {
+					log.Warnf("[OCPBUGS-85092] skipping ptp4l master update: no SLAVE interface cfg=%s sync=%s roles=%s raw=%s",
+						configName, syncState, roleSnapshot(ptp4lCfg), output)
 				}
 			default: // for ts2phc the master stats are not updated at all, so rely on interface
 				if processName == ts2phcProcessName {
@@ -396,6 +405,20 @@ func (p *PTPEventManager) processDownEvent(profileName, processName string, ptpS
 			}
 		}
 	}
+}
+
+func roleSnapshot(cfg *ptp4lconf.PTP4lConfig) string {
+	if cfg == nil {
+		return "nil-cfg"
+	}
+	parts := make([]string, 0, len(cfg.Interfaces))
+	for _, intf := range cfg.Interfaces {
+		if intf == nil {
+			continue
+		}
+		parts = append(parts, fmt.Sprintf("%s=%s", intf.Name, intf.Role))
+	}
+	return strings.Join(parts, ",")
 }
 
 func (p *PTPEventManager) validLogToProcess(profileName, processName string, iFaceSize int) bool {

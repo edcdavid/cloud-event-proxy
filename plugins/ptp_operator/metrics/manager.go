@@ -453,6 +453,9 @@ func (p *PTPEventManager) GenPTPEvent(ptpProfileName string, oStats *stats.Stats
 				p.PublishEvent(clockState, ptpOffset, eventResourceName, eventType) // change to locked
 				oStats.SetLastOffset(ptpOffset)
 				oStats.AddValue(ptpOffset) // update off set when its in locked state and hold over only
+			} else {
+				log.Warnf("[OCPBUGS-85092] LOCKED transition blocked: profile=%s resource=%s last=%s current=%s offset=%d threshold=[%d,%d]",
+					ptpProfileName, eventResourceName, lastClockState, clockState, ptpOffset, threshold.MinOffsetThreshold, threshold.MaxOffsetThreshold)
 			}
 		case ptp.LOCKED: // last state was in sync , check if it is out of sync now
 			if isOffsetInRange(ptpOffset, threshold.MaxOffsetThreshold, threshold.MinOffsetThreshold) {
